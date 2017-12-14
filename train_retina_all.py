@@ -28,8 +28,11 @@ if 'instance-1' in host:
         print('In train mode...')
         #TOTAL_BATCH_SIZE = 5000
         #MB_SIZE = 5000
-        TOTAL_BATCH_SIZE = 100
-        MB_SIZE = 100
+        #TOTAL_BATCH_SIZE = 100
+        #MB_SIZE = 100
+        # Change batch size for ConvLstm1->ConvLstm2->Fc model
+        TOTAL_BATCH_SIZE = 75
+        MB_SIZE = 75
         NUM_GPUS = 1
     else:
         print('In val mode...')
@@ -40,8 +43,11 @@ if 'instance-1' in host:
         else:
             #TOTAL_BATCH_SIZE = 5956
             #MB_SIZE = 5956
-            TOTAL_BATCH_SIZE = 100
-            MB_SIZE = 100
+            #TOTAL_BATCH_SIZE = 100
+            #MB_SIZE = 100
+            # Change batch size for ConvLstm1->ConvLstm2->Fc model
+            TOTAL_BATCH_SIZE = 75
+            MB_SIZE = 75
             NUM_GPUS = 1
             
 else:
@@ -180,6 +186,68 @@ def convLstmDropout(inputs, train=True, prefix=MODEL_PREFIX, devices=DEVICES, nu
     input_list.append(slice_val)
 
     with tf.variable_scope("retina_tnn_dropout"):
+        base_name += '.json'
+        print('Using base: ', base_name)
+        # creates the feedforward network graph from json
+        G = main.graph_from_json(base_name)
+
+        for node, attr in G.nodes(data=True):
+            if node in ['conv1', 'conv2']:
+                if train: # we add dropout to fc6 and fc7 during training
+                    print('Using dropout for ' + node)
+                    attr['kwargs']['post_memory'][1][1]['keep_prob'] = 0.75
+                else: # turn off dropout during training
+                    print('Not using dropout')
+                    attr['kwargs']['post_memory'][1][1]['keep_prob'] = 1.0
+
+            memory_func, memory_param = attr['kwargs']['memory']
+            if 'filter_size' in memory_param:
+                attr['cell'] = tnn_ConvLSTMCell
+            elif 'nunits' in memory_param:
+                assert(0)
+                attr['cell'] = tnn_DenseRNNCell
+            else:
+                attr['kwargs']['memory'][1]['memory_decay'] = tau
+                attr['kwargs']['memory'][1]['trainable'] = trainable_flag
+
+        # add any non feedforward connections here: [('L2', 'L1')]
+        G.add_edges_from(edges_arr)
+
+        # initialize network to infer the shapes of all the parameters
+        main.init_nodes(G, input_nodes=['conv1'], batch_size=batch_size, channel_op=channel_op)
+        # unroll the network through time
+        main.unroll(G, input_seq={'conv1': input_list}, ntimes=ntimes)
+
+        outputs = {}
+        # start from the final output of the model and num timesteps beyond that
+        # for t in range(ntimes-NUM_TIMESTEPS, ntimes):
+        #     idx = t - (ntimes - NUM_TIMESTEPS) # keys start at timepoint 0
+        #    outputs[idx] = G.node['fc8']['outputs'][t]
+        
+        # alternatively, we return the final output of the model at the last timestep
+        outputs['pred'] = G.node['fc3']['outputs'][-1]
+        return outputs, params
+
+def convLstmDropout_no_pre_mem(inputs, train=True, prefix=MODEL_PREFIX, devices=DEVICES, num_gpus=NUM_GPUS, ntimes=TOTAL_TIMESTEPS, edges_arr=[], base_name='retina_tnn_dropout_no_conv', tau=0.0, trainable_flag=False, channel_op='concat', seed=0, cfg_final=None):
+    params = OrderedDict()
+    batch_size = inputs['images'].get_shape().as_list()[0]
+
+    params['stim_type'] = stim_type
+    params['train'] = train
+    params['batch_size'] = batch_size
+
+    input_images = inputs['images']
+    input_images = tf.reshape(input_images, [batch_size, 40, 50, 50, 1])
+
+    input_list = []
+    for i in range(40):
+        slice_val = tf.squeeze(tf.slice(input_images, [0, i, 0, 0, 0], [-1, 1, -1, -1, -1]), axis=1)
+        input_list.append(slice_val)
+    input_list.append(slice_val)
+    input_list.append(slice_val)
+    input_list.append(slice_val)
+
+    with tf.variable_scope("retina_tnn_dropout_no_conv"):
         base_name += '.json'
         print('Using base: ', base_name)
         # creates the feedforward network graph from json
@@ -596,6 +664,25 @@ def train_cnn_lstm_dropout_fb():
     params['learning_rate_params']['learning_rate'] = 1e-5
     base.train_from_params(**params)
 
+def train_cnn_lstm_dropout_no_pre_mem():
+    params = copy.deepcopy(default_params)
+    params['save_params']['dbname'] = 'cnn_lstm_dropout_no_pre_mem'
+    params['save_params']['collname'] = stim_type
+    params['save_params']['exp_id'] = 'trainval0'
+
+    # Set to True if starting training again
+    params['load_params']['do_restore'] = False
+
+    params['model_params'] = {
+        'func': convLstmDropout_no_pre_mem,
+        'num_gpus': NUM_GPUS,
+        'devices': DEVICES,
+        'prefix': MODEL_PREFIX
+    }
+
+    params['learning_rate_params']['learning_rate'] = 1e-5
+    base.train_from_params(**params)
+
 def train_cnn_fc_lstm():
     params = copy.deepcopy(default_params)
     params['save_params']['dbname'] = 'cnn_fc_lstm'
@@ -620,8 +707,9 @@ if __name__ == '__main__':
 
 # MODELS
 #    train_cnn_lstm_dropout()
+    train_cnn_lstm_dropout_no_pre_mem()
 #    train_cnn_fc_lstm()
-    train_cnn_lstm_dropout_fb()
+#    train_cnn_lstm_dropout_fb()
 
 
 

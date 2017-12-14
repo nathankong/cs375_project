@@ -22,25 +22,16 @@
         "kernel_init": "xavier"
       },
       "pre_memory": [
+      ],
+      "memory": {
+        "function": "memory",
+        "shape": [50, 50],
+        "filter_size": [15, 15],
+        "out_depth": 16
+      },
+      "post_memory": [
         {
-          "function": "conv",
-          "out_depth": 16,
-          "ksize": 15,
-          "strides": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "padding": "VALID",
-          "kernel_init": "xavier",
-          "kernel_init_kwargs": {
-            "seed": 0
-          },
-          "bias": 0,
-          "weight_decay": null,
-          "activation": null,
-          "batch_norm": false
+          "function": "relu"
         },
         {
           "function": "dropout",
@@ -48,17 +39,6 @@
           "seed": 0,
           "name": "dropoutconv1"
         } 
-      ],
-      "memory": {
-        "function": "memory",
-        "shape": [36, 36],
-        "filter_size": [15, 15],
-        "out_depth": 16
-      },
-      "post_memory": [
-        {
-          "function": "relu"
-        }
       ]
     },
     {
@@ -79,25 +59,16 @@
         "kernel_init": "xavier"
       },
       "pre_memory": [
+      ],
+      "memory": {
+        "function": "memory",
+        "shape": [50, 50],
+        "filter_size": [9, 9],
+        "out_depth": 8
+      },
+      "post_memory": [
         {
-          "function": "conv",
-          "out_depth": 8,
-          "ksize": 9,
-          "strides": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "padding": "VALID",
-          "kernel_init": "xavier",
-          "kernel_init_kwargs": {
-            "seed": 0
-          },
-          "bias": 0,
-          "weight_decay": null,
-          "activation": null,
-          "batch_norm": false
+          "function": "relu"
         },
         {
           "function": "dropout",
@@ -105,17 +76,6 @@
           "seed": 0,
           "name": "dropoutconv2"
         } 
-      ],
-      "memory": {
-        "function": "memory",
-        "shape": [28, 28],
-        "filter_size": [9, 9],
-        "out_depth": 8
-      },
-      "post_memory": [
-        {
-          "function": "relu"
-        }
       ]
     },
     {
@@ -151,13 +111,7 @@
       "post_memory": [
         {
           "function": "softplus"
-        },
-        {
-          "function": "dropout",
-          "keep_prob": 1.0,
-          "seed": 0,
-          "name": "dropoutfc3"
-        } 
+        }
       ]
     }
   ],
