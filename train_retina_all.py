@@ -28,27 +28,21 @@ if 'instance-1' in host:
         print('In train mode...')
         #TOTAL_BATCH_SIZE = 5000
         #MB_SIZE = 5000
-        #TOTAL_BATCH_SIZE = 100
-        #MB_SIZE = 100
-        # Change batch size for ConvLstm1->ConvLstm2->Fc model
-        TOTAL_BATCH_SIZE = 75
-        MB_SIZE = 75
-        NUM_GPUS = 1
+        TOTAL_BATCH_SIZE = 104
+        MB_SIZE = 104
+        NUM_GPUS = 8
     else:
         print('In val mode...')
         if stim_type == 'whitenoise':
             TOTAL_BATCH_SIZE = 5957
             MB_SIZE = 5957
-            NUM_GPUS = 1
+            NUM_GPUS = 8
         else:
             #TOTAL_BATCH_SIZE = 5956
             #MB_SIZE = 5956
-            #TOTAL_BATCH_SIZE = 100
-            #MB_SIZE = 100
-            # Change batch size for ConvLstm1->ConvLstm2->Fc model
-            TOTAL_BATCH_SIZE = 75
-            MB_SIZE = 75
-            NUM_GPUS = 1
+            TOTAL_BATCH_SIZE = 104
+            MB_SIZE = 104
+            NUM_GPUS = 8
             
 else:
     print("Data path not found!!")
@@ -671,7 +665,7 @@ def train_cnn_lstm_dropout_no_pre_mem():
     params['save_params']['exp_id'] = 'trainval0'
 
     # Set to True if starting training again
-    params['load_params']['do_restore'] = False
+    params['load_params']['do_restore'] = True
 
     params['model_params'] = {
         'func': convLstmDropout_no_pre_mem,
